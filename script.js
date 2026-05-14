@@ -181,6 +181,15 @@ async function loadData() {
           key === "Timestamp"
         ) continue;
 
+        if (
+          key === "Power (R)" ||
+          key === "Power (S)" ||
+          key === "Power (T)" ||
+          key === "Energy (R)" ||
+          key === "Energy (S)" ||
+          key === "Energy (T)"
+        ) continue;
+
         let value = unit[key];
         let unitText = units[key] || "";
 
