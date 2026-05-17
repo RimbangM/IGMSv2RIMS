@@ -108,6 +108,7 @@ async function loadData() {
     const data = await response.json();
 
     // CLEAR SIDEBAR
+
     document.getElementById("generator-list").innerHTML = "";
 
     data.forEach(unit => {
@@ -135,29 +136,27 @@ async function loadData() {
 
       }
 
-        // =========================
-        // FORMAT LOCATION
-        // =========================
+      // =========================
+      // FORMAT LOCATION
+      // =========================
 
-        let locationText = "Location Not Available";
+      let locationText = "Location Not Available";
 
-        if (unit.Location && unit.Location !== "") {
+      if (unit.Location && unit.Location !== "") {
 
-          locationText = `
-            <a href="https://www.google.com/maps?q=${lat},${lng}"
-              target="_blank"
-              style="
-                color:#38bdf8;
-                text-decoration:none;
-                font-weight:bold;
-              ">
-              ${unit.Location}
-            </a>
-          `;
+        locationText = `
+          <a href="https://www.google.com/maps?q=${lat},${lng}"
+            target="_blank"
+            style="
+              color:#38bdf8;
+              text-decoration:none;
+              font-weight:bold;
+            ">
+            ${unit.Location}
+          </a>
+        `;
 
-        }
-
-      
+      }
 
       // =========================
       // TABLE DATA
@@ -165,29 +164,36 @@ async function loadData() {
 
       let engineRows = "";
       let electricalRows = "";
+      let radiatorRows = "";
       let otherRows = "";
 
       for (const key in unit) {
 
-        // skip raw coordinate
+        // SKIP COORDINATE
+
         if (
           key === "Latitude" ||
           key === "Longitude"
         ) continue;
 
-        // skip duplicate
-        if (
-          key === "Location" ||
-          key === "Timestamp"
-        ) continue;
+        // SKIP DUPLICATE
 
         if (
-          key === "Power (R)" ||
-          key === "Power (S)" ||
-          key === "Power (T)" ||
+          key === "Location" ||
+          key === "Timestamp" 
+
+        ) continue;
+
+        // SKIP ENERGY
+
+        if (
           key === "Energy (R)" ||
           key === "Energy (S)" ||
-          key === "Energy (T)"
+          key === "Energy (T)" ||
+           
+          key === "Power (R)" ||
+          key === "Power (S)" ||
+          key === "Power (T)"
         ) continue;
 
         let value = unit[key];
@@ -203,10 +209,43 @@ async function loadData() {
 
         }
 
+        // =========================
+        // RENAME LABEL
+        // =========================
+
+        let displayKey = key;
+
+        if (key === "Device")
+          displayKey = "Generator";
+
+        // MOTOR RADIATOR LABEL
+
+        if (key === "Voltage (R)")
+          displayKey = "Voltage R-N";
+
+        if (key === "Voltage (S)")
+          displayKey = "Voltage S-N";
+
+        if (key === "Voltage (T)")
+          displayKey = "Voltage T-N";
+
+        if (key === "Current (R)")
+          displayKey = "Current U";
+
+        if (key === "Current (S)")
+          displayKey = "Current V";
+
+        if (key === "Current (T)")
+          displayKey = "Current W";
+
+        // =========================
+        // BUILD ROW
+        // =========================
+
         const row = `
 
           <tr>
-            <td>${key === "Device" ? "Generator" : key}</td>
+            <td>${displayKey}</td>
             <td>${value} ${unitText}</td>
           </tr>
 
@@ -230,10 +269,28 @@ async function loadData() {
         }
 
         // =========================
-        // ELECTRICAL DATA
+        // MOTOR RADIATOR
         // =========================
 
-          else if (
+        else if (
+
+          key === "Voltage (R)" ||
+          key === "Voltage (S)" ||
+          key === "Voltage (T)" ||
+
+          key === "Current (R)" ||
+          key === "Current (S)" ||
+          key === "Current (T)"
+
+        ) {
+
+        }
+
+        // =========================
+        // GENERATOR
+        // =========================
+
+        else if (
 
           key.includes("Voltage") ||
           key.includes("Power") ||
@@ -248,7 +305,7 @@ async function loadData() {
           key.includes("Charger") ||
           key.includes("pf")
 
-        ){
+        ) {
 
           electricalRows += row;
 
@@ -258,33 +315,91 @@ async function loadData() {
         // OTHER DATA
         // =========================
 
-       else {
-
-        // STATUS KHUSUS PALING BAWAH
-
-        if (
-
-          key === "LVR" ||
-          key === "UPR" ||
-          key === "FPK" ||
-          key === "FPK FAILURE" ||
-          key === "swt5State"
-
-        ) {
-
-          otherRows += "";
-
-        }
-
         else {
 
-          otherRows += row;
+          // STATUS PALING BAWAH
+
+          if (
+
+            key === "LVR" ||
+            key === "UPR" ||
+            key === "FPK" ||
+            key === "FPK FAILURE" ||
+            key === "swt5State"
+
+          ) {
+
+            otherRows += "";
+
+          }
+
+          else {
+
+            otherRows += row;
+
+          }
 
         }
 
       }
 
-      }
+      // =========================
+      // MOTOR RADIATOR ORDER
+      // =========================
+
+      radiatorRows = `
+
+        <tr>
+          <td>Voltage R-N</td>
+          <td>${unit["Voltage (R)"] || "-"} VAC</td>
+        </tr>
+
+        <tr>
+          <td>Voltage S-N</td>
+          <td>${unit["Voltage (S)"] || "-"} VAC</td>
+        </tr>
+
+        <tr>
+          <td>Voltage T-N</td>
+          <td>${unit["Voltage (T)"] || "-"} VAC</td>
+        </tr>
+
+        <tr>
+          <td>Current U</td>
+          <td>${unit["Current (R)"] || "-"} A</td>
+        </tr>
+
+        <tr>
+          <td>Current V</td>
+          <td>${unit["Current (S)"] || "-"} A</td>
+        </tr>
+
+        <tr>
+          <td>Current W</td>
+          <td>${unit["Current (T)"] || "-"} A</td>
+        </tr>
+
+      `;
+
+      // =========================
+      // TOTAL POWER RADIATOR
+      // =========================
+
+      const powerR = parseFloat(unit["Power (R)"]) || 0;
+      const powerS = parseFloat(unit["Power (S)"]) || 0;
+      const powerT = parseFloat(unit["Power (T)"]) || 0;
+
+      const totalRadiatorPower =
+        ((powerR + powerS + powerT) / 1000).toFixed(2);
+
+      radiatorRows += `
+
+        <tr>
+          <td>Power Total</td>
+          <td>${totalRadiatorPower} kW</td>
+        </tr>
+
+      `;
 
       // =========================
       // POPUP CONTENT
@@ -300,7 +415,7 @@ async function loadData() {
 
           <table class="popup-table">
 
-           ${otherRows}
+            ${otherRows}
 
             <tr>
               <td>Location</td>
@@ -312,7 +427,6 @@ async function loadData() {
               <td>${formattedTime}</td>
             </tr>
 
-
             <!-- ENGINE -->
 
             <tr>
@@ -323,15 +437,27 @@ async function loadData() {
 
             ${engineRows}
 
-            <!-- ELECTRICAL -->
+            <!-- GENERATOR -->
 
             <tr>
               <td colspan="2" class="section-title">
-                ELECTRICAL
+                GENERATOR
               </td>
             </tr>
 
             ${electricalRows}
+
+            <!-- MOTOR RADIATOR -->
+
+            <tr>
+              <td colspan="2" class="section-title">
+                MOTOR RADIATOR
+              </td>
+            </tr>
+
+            ${radiatorRows}
+
+            <!-- STATUS -->
 
             <tr>
               <td colspan="2" class="section-title">
@@ -442,7 +568,7 @@ async function loadData() {
       card.innerHTML = `
 
         <div class="generator-title">
-          ${unit.Generator || unit.Device || "-"}
+          ${unit.Device || "-"}
         </div>
 
         <div class="generator-data">
@@ -559,6 +685,7 @@ map.on("click", () => {
   Object.values(markers).forEach(marker => {
 
     marker.closePopup();
+
 
   });
 
